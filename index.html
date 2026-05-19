@@ -63,6 +63,15 @@
     .generate-btn:hover { opacity: 0.88; }
     .generate-btn:active { opacity: 0.75; }
 
+    .section-header { cursor: pointer; user-select: none; }
+    .section-header:hover { background: #181818; }
+    .chevron { transition: transform 0.2s; color: #444; flex-shrink: 0; }
+    .section-card.collapsed .chevron { transform: rotate(-90deg); }
+    .section-card.collapsed .section-body { display: none; }
+
+    .new-insp-btn { background: transparent; border: 1px solid #2a2a2a; border-radius: 7px; padding: 7px 14px; color: #666; font-size: 0.75rem; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.12s; }
+    .new-insp-btn:hover { border-color: #e63946; color: #e63946; }
+
     @media (max-width: 580px) {
       .item-row { grid-template-columns: 1fr; }
       .photo-area { flex-direction: row; justify-content: flex-start; }
@@ -80,7 +89,10 @@
     </div>
     <div style="font-size:0.65rem; color:#444; letter-spacing:0.12em; text-transform:uppercase; margin-top:3px;">Vehicle Inspection System</div>
   </div>
-  <div id="header-date" style="font-size:0.78rem; color:#444;"></div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div id="header-date" style="font-size:0.78rem; color:#444;"></div>
+    <button class="new-insp-btn" onclick="newInspection()">+ New Inspection</button>
+  </div>
 </header>
 
 <!-- ── Summary Bar ────────────────────────────────────────────────────── -->
@@ -171,18 +183,19 @@ function buildSections() {
     card.className = 'section-card';
     card.id = `sec-${sec.id}`;
     card.innerHTML = `
-      <div class="section-header">
+      <div class="section-header" onclick="toggleSection('${sec.id}')">
         <span class="section-num">${si + 1}</span>
         <span class="section-title">${sec.title}</span>
         <span class="section-badge" id="badge-${sec.id}">0 / ${sec.items.length}</span>
+        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
-      <div id="rows-${sec.id}">
+      <div class="section-body" id="rows-${sec.id}">
         ${sec.items.map((item, i) => itemRow(sec.id, i, item, false)).join('')}
+        <button class="add-item-btn" onclick="addCustom('${sec.id}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add item
+        </button>
       </div>
-      <button class="add-item-btn" onclick="addCustom('${sec.id}')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add item
-      </button>
     `;
     wrap.appendChild(card);
   });
@@ -263,10 +276,15 @@ function addCustom(sid) {
   const i = state.custom[sid].length;
   state.custom[sid].push({ label:'', status:null, notes:'', photo:null });
   const wrap = document.getElementById(`rows-${sid}`);
+  const addBtn = wrap.querySelector('.add-item-btn');
   const div = document.createElement('div');
   div.innerHTML = itemRow(sid, i, '', true);
-  wrap.appendChild(div.firstElementChild);
+  wrap.insertBefore(div.firstElementChild, addBtn);
   updateBadge(sid);
+}
+
+function toggleSection(sid) {
+  document.getElementById(`sec-${sid}`).classList.toggle('collapsed');
 }
 
 // ── SUMMARY ──────────────────────────────────────────────────────────────────
@@ -324,7 +342,7 @@ function generateReport() {
   statusEl.textContent = 'Building report...';
   statusEl.style.color = '#c9a84c';
 
-  setTimeout(() => {
+  setTimeout(async () => {
     try {
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -534,20 +552,23 @@ function generateReport() {
       // ── EMAIL ────────────────────────────────────────────────────────────
       const email = emailEl.value.trim();
       if (email) {
-        const subj = encodeURIComponent(`Vehicle Inspection Report — ${make}`);
-        const body = encodeURIComponent(
-          `Dear ${client},\n\n` +
-          `Please find attached your vehicle inspection report from Stracuzzi Automobili.\n\n` +
-          `Inspection Summary:\n` +
-          `  • ${totalG} items in good condition\n` +
-          `  • ${totalY} items to monitor\n` +
-          `  • ${totalR} items require immediate attention\n\n` +
-          `Please review and contact us with any questions.\n\n` +
-          `Stracuzzi Automobili`
-        );
-        window.open(`mailto:${email}?subject=${subj}&body=${body}`);
-        statusEl.textContent = '✓ PDF downloaded. Email draft opened — attach the PDF and send.';
-        statusEl.style.color = '#52b788';
+        statusEl.textContent = 'Sending email...';
+        statusEl.style.color = '#c9a84c';
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+        try {
+          const resp = await fetch('/api/send-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: email, clientName: client, make, pdfBase64, filename, totalG, totalY, totalR })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Send failed');
+          statusEl.textContent = `✓ Report downloaded & email sent to ${email}`;
+          statusEl.style.color = '#52b788';
+        } catch (emailErr) {
+          statusEl.textContent = `✓ PDF downloaded. Email failed: ${emailErr.message}`;
+          statusEl.style.color = '#f0a030';
+        }
       } else {
         statusEl.textContent = '✓ Report downloaded as ' + filename;
         statusEl.style.color = '#52b788';
@@ -559,6 +580,38 @@ function generateReport() {
       statusEl.style.color = '#e63946';
     }
   }, 60);
+}
+
+// ── NEW INSPECTION ────────────────────────────────────────────────────────────
+function newInspection() {
+  if (!confirm('Start a new inspection? All current data will be cleared.')) return;
+
+  // Reset state
+  SECTIONS.forEach(s => {
+    state.custom[s.id] = [];
+    s.items.forEach((_, i) => { state.items[`${s.id}__${i}`] = { status: null, notes: '' }; });
+  });
+  Object.keys(state.photos).forEach(k => delete state.photos[k]);
+
+  // Clear vehicle info inputs
+  ['v-client','v-make','v-vin','v-mileage','v-tech','fa-tech','fa-notes','customer-email'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('v-date').value = today;
+  document.getElementById('fa-date').value = today;
+
+  // Rebuild sections
+  document.getElementById('inspection-sections').innerHTML = '';
+  buildSections();
+
+  // Reset summary + status
+  updateSummary();
+  document.getElementById('send-status').textContent = '';
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
