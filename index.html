@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Stracuzzi Automobili · Vehicle Inspection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #080808; color: #d4d4d4; min-height: 100vh; }
+
+    .section-card { background: #111; border: 1px solid #1e1e1e; border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+    .section-header { background: #141414; border-bottom: 1px solid #1e1e1e; padding: 12px 18px; display: flex; align-items: center; gap: 10px; }
+    .section-title { font-family: 'Playfair Display', serif; font-size: 1rem; color: #e8e8e8; }
+    .section-badge { font-size: 0.68rem; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 20px; padding: 2px 10px; color: #666; margin-left: auto; }
+    .section-num { font-size: 0.68rem; color: #c9a84c; font-weight: 600; min-width: 18px; }
+
+    .item-row { border-bottom: 1px solid #171717; padding: 10px 16px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+    .item-row:last-child { border-bottom: none; }
+
+    .item-name { font-size: 0.85rem; font-weight: 500; color: #ccc; margin-bottom: 6px; }
+    .item-name-input { background: transparent; border: none; border-bottom: 1px solid #2a2a2a; padding: 2px 0; color: #ccc; font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 500; width: 100%; margin-bottom: 6px; outline: none; }
+    .item-name-input::placeholder { color: #444; }
+    .item-name-input:focus { border-color: #c9a84c55; }
+
+    .status-row { display: flex; gap: 5px; flex-wrap: wrap; }
+    .status-btn { padding: 4px 11px; border-radius: 20px; border: 1px solid; font-size: 0.7rem; font-weight: 500; cursor: pointer; transition: all 0.12s; background: transparent; font-family: 'Inter', sans-serif; }
+    .status-btn.green  { border-color: #1e5c3a; color: #4caf87; }
+    .status-btn.yellow { border-color: #664f00; color: #e8a030; }
+    .status-btn.red    { border-color: #6b1515; color: #e03030; }
+    .status-btn.green.active  { background: #162b20; border-color: #52b788; color: #7dd9a8; }
+    .status-btn.yellow.active { background: #2d2000; border-color: #f0a030; color: #ffc060; }
+    .status-btn.red.active    { background: #2d0a0a; border-color: #e63946; color: #ff6b6b; }
+    .status-btn:hover { opacity: 0.8; }
+
+    .notes-input { width: 100%; background: #0c0c0c; border: 1px solid #1e1e1e; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; color: #bbb; resize: none; font-family: 'Inter', sans-serif; margin-top: 6px; min-height: 28px; overflow: hidden; }
+    .notes-input:focus { outline: none; border-color: #c9a84c33; }
+    .notes-input::placeholder { color: #3a3a3a; }
+
+    .photo-area { display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 2px; }
+    .photo-btn { background: #141414; border: 1px solid #242424; border-radius: 8px; padding: 7px 9px; cursor: pointer; color: #555; transition: all 0.12s; display: flex; align-items: center; justify-content: center; }
+    .photo-btn:hover { border-color: #c9a84c44; color: #c9a84c; }
+    .photo-thumb { width: 60px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid #2a2a2a; display: none; cursor: pointer; }
+    .photo-thumb:hover { opacity: 0.7; }
+
+    .add-item-btn { margin: 8px 16px 12px; background: transparent; border: 1px dashed #222; border-radius: 8px; padding: 8px 14px; color: #444; font-size: 0.78rem; cursor: pointer; width: calc(100% - 32px); transition: all 0.12s; display: flex; align-items: center; gap: 6px; font-family: 'Inter', sans-serif; }
+    .add-item-btn:hover { border-color: #c9a84c44; color: #c9a84c88; }
+
+    .vehicle-input { width: 100%; background: #0c0c0c; border: 1px solid #1e1e1e; border-radius: 8px; padding: 9px 13px; font-size: 0.85rem; color: #d4d4d4; font-family: 'Inter', sans-serif; }
+    .vehicle-input:focus { outline: none; border-color: #c9a84c55; }
+    .vehicle-input::placeholder { color: #333; }
+    .vehicle-label { font-size: 0.68rem; color: #555; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .summary-bar { position: sticky; top: 0; z-index: 50; background: #080808ee; border-bottom: 1px solid #161616; backdrop-filter: blur(8px); padding: 10px 20px; display: flex; gap: 18px; align-items: center; }
+    .summary-pill { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: #999; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    .generate-btn { background: #c9a84c; color: #080808; border: none; border-radius: 8px; padding: 11px 24px; font-size: 0.875rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; transition: opacity 0.15s; }
+    .generate-btn:hover { opacity: 0.88; }
+    .generate-btn:active { opacity: 0.75; }
+
+    @media (max-width: 580px) {
+      .item-row { grid-template-columns: 1fr; }
+      .photo-area { flex-direction: row; justify-content: flex-start; }
+      .vgrid { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────── -->
+<header style="background:#0d0d0d; border-bottom:1px solid #1a1a1a; padding:18px 24px; display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <div style="font-family:'Playfair Display',serif; font-size:1.25rem; color:#e8e8e8; letter-spacing:0.02em;">
+      Stracuzzi <em style="color:#c9a84c;">Automobili</em>
+    </div>
+    <div style="font-size:0.65rem; color:#444; letter-spacing:0.12em; text-transform:uppercase; margin-top:3px;">Vehicle Inspection System</div>
+  </div>
+  <div id="header-date" style="font-size:0.78rem; color:#444;"></div>
+</header>
+
+<!-- ── Summary Bar ────────────────────────────────────────────────────── -->
+<div class="summary-bar">
+  <div style="font-size:0.65rem; color:#444; text-transform:uppercase; letter-spacing:0.06em; margin-right:2px;">Summary</div>
+  <div class="summary-pill"><div class="dot" style="background:#52b788;"></div><span id="cnt-green">0</span> Good</div>
+  <div class="summary-pill"><div class="dot" style="background:#f0a030;"></div><span id="cnt-yellow">0</span> Monitor</div>
+  <div class="summary-pill"><div class="dot" style="background:#e63946;"></div><span id="cnt-red">0</span> Fix ASAP</div>
+  <div style="margin-left:auto; font-size:0.72rem; color:#3a3a3a;" id="cnt-pending"></div>
+</div>
+
+<!-- ── Main Content ───────────────────────────────────────────────────── -->
+<div style="max-width:820px; margin:0 auto; padding:20px 14px 60px;">
+
+  <!-- Vehicle Information -->
+  <div class="section-card">
+    <div class="section-header">
+      <span class="section-title">Vehicle Information</span>
+    </div>
+    <div style="padding:16px 20px; display:grid; grid-template-columns:1fr 1fr; gap:14px;" class="vgrid">
+      <div><div class="vehicle-label">Client Name</div><input class="vehicle-input" id="v-client" type="text" placeholder="Full name"></div>
+      <div><div class="vehicle-label">Make / Model / Year</div><input class="vehicle-input" id="v-make" type="text" placeholder="e.g. Ferrari 488 2019"></div>
+      <div><div class="vehicle-label">VIN</div><input class="vehicle-input" id="v-vin" type="text" placeholder="Vehicle Identification Number"></div>
+      <div><div class="vehicle-label">Mileage</div><input class="vehicle-input" id="v-mileage" type="text" placeholder="e.g. 24,500 mi"></div>
+      <div><div class="vehicle-label">Date of Inspection</div><input class="vehicle-input" id="v-date" type="date"></div>
+      <div><div class="vehicle-label">Technician</div><input class="vehicle-input" id="v-tech" type="text" placeholder="Name"></div>
+    </div>
+  </div>
+
+  <!-- Inspection Sections (built by JS) -->
+  <div id="inspection-sections"></div>
+
+  <!-- Final Approval -->
+  <div class="section-card">
+    <div class="section-header">
+      <span class="section-title">Final Approval</span>
+    </div>
+    <div style="padding:16px 20px; display:grid; grid-template-columns:1fr 1fr; gap:14px;" class="vgrid">
+      <div><div class="vehicle-label">Technician Name</div><input class="vehicle-input" id="fa-tech" type="text" placeholder="Full name"></div>
+      <div><div class="vehicle-label">Date</div><input class="vehicle-input" id="fa-date" type="date"></div>
+      <div style="grid-column:span 2;">
+        <div class="vehicle-label">Overall Notes / Recommendations</div>
+        <textarea class="notes-input" id="fa-notes" rows="3" placeholder="Summary assessment, next steps, estimated hours..." style="min-height:70px;"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Section -->
+  <div class="section-card" style="padding:20px;">
+    <div class="vehicle-label" style="margin-bottom:10px;">Send Report to Customer</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <input type="email" id="customer-email" placeholder="customer@email.com"
+        style="flex:1; min-width:200px; background:#0c0c0c; border:1px solid #1e1e1e; border-radius:8px; padding:10px 14px; font-size:0.85rem; color:#d4d4d4; font-family:'Inter',sans-serif;">
+      <button class="generate-btn" onclick="generateReport()">Generate &amp; Send Report &rarr;</button>
+    </div>
+    <div id="send-status" style="margin-top:10px; font-size:0.8rem; color:#555; min-height:18px;"></div>
+  </div>
+
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const SECTIONS = [
+  { id:'safety',       title:'Safety Equipment & Lights',  items:['Headlights (low/high beam)','Brake lights','Turn signals','Hazard lights','Horn','Wipers / washers'] },
+  { id:'tires',        title:'Tires & Wheels',              items:['Tire condition (tread depth)','Sidewall condition','Tire age','Tire pressure','Wheel condition','Wheel torque'] },
+  { id:'engine',       title:'Engine Compartment',          items:['No fluid leaks','Belts condition','Hoses condition','Throttle return spring','Battery secure','Exhaust system secure'] },
+  { id:'transmission', title:'Transmission & Drivetrain',   items:['Clutch operation','Gear engagement','Driveline noise','Fluid condition','Linkage play'] },
+  { id:'steering',     title:'Steering & Suspension',       items:['Steering play','Shock absorbers','Bushings','No abnormal noises'] },
+  { id:'body',         title:'Body & Structure',            items:['No structural rust','Windshield condition','Mirrors secure','No loose trim','No sharp edges'] },
+  { id:'operational',  title:'Operational Check',           items:['Engine starts properly','Idle stability','No abnormal vibrations','No excessive smoke','Throttle response'] },
+  { id:'leaks',        title:'Leak Classification',         items:['Dry','Slightly wet','Weeping','Active leak','Severe leak'] },
+  { id:'docs',         title:'Final Documentation',         items:['Photos taken','Damage recorded','Fuel level noted','Technician notes completed'] }
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+const state = { items: {}, photos: {}, custom: {} };
+
+SECTIONS.forEach(s => {
+  state.custom[s.id] = [];
+  s.items.forEach((_, i) => { state.items[`${s.id}__${i}`] = { status: null, notes: '' }; });
+});
+
+// ── BUILD UI ─────────────────────────────────────────────────────────────────
+function buildSections() {
+  const wrap = document.getElementById('inspection-sections');
+  SECTIONS.forEach((sec, si) => {
+    const card = document.createElement('div');
+    card.className = 'section-card';
+    card.id = `sec-${sec.id}`;
+    card.innerHTML = `
+      <div class="section-header">
+        <span class="section-num">${si + 1}</span>
+        <span class="section-title">${sec.title}</span>
+        <span class="section-badge" id="badge-${sec.id}">0 / ${sec.items.length}</span>
+      </div>
+      <div id="rows-${sec.id}">
+        ${sec.items.map((item, i) => itemRow(sec.id, i, item, false)).join('')}
+      </div>
+      <button class="add-item-btn" onclick="addCustom('${sec.id}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add item
+      </button>
+    `;
+    wrap.appendChild(card);
+  });
+}
+
+function itemRow(sid, idx, label, isCustom) {
+  const pfx = isCustom ? `c-${sid}-${idx}` : `${sid}-${idx}`;
+  const labelHtml = isCustom
+    ? `<input class="item-name-input" type="text" placeholder="Item description..." value="${label || ''}" oninput="state.custom['${sid}'][${idx}].label=this.value">`
+    : `<div class="item-name">${label}</div>`;
+  return `
+    <div class="item-row" id="row-${pfx}">
+      <div style="flex:1;">
+        ${labelHtml}
+        <div class="status-row">
+          <button class="status-btn green"  id="btn-green-${pfx}"  onclick="setStatus('${sid}',${idx},${isCustom},'green')">&#10003; Good</button>
+          <button class="status-btn yellow" id="btn-yellow-${pfx}" onclick="setStatus('${sid}',${idx},${isCustom},'yellow')">&#9888; Monitor</button>
+          <button class="status-btn red"    id="btn-red-${pfx}"    onclick="setStatus('${sid}',${idx},${isCustom},'red')">&#10005; Fix ASAP</button>
+        </div>
+        <textarea class="notes-input" id="notes-${pfx}" rows="1" placeholder="Notes..."
+          oninput="setNotes('${sid}',${idx},${isCustom},this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+      </div>
+      <div class="photo-area">
+        <input type="file" accept="image/*" id="file-${pfx}" style="display:none" onchange="handlePhoto('${sid}',${idx},${isCustom},this)">
+        <button class="photo-btn" onclick="document.getElementById('file-${pfx}').click()" title="Add photo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </button>
+        <img id="thumb-${pfx}" class="photo-thumb" title="Click to remove" onclick="removePhoto('${sid}',${idx},${isCustom},'${pfx}')">
+      </div>
+    </div>`;
+}
+
+// ── MUTATIONS ─────────────────────────────────────────────────────────────────
+function getObj(sid, idx, isCustom) {
+  return isCustom ? state.custom[sid][idx] : state.items[`${sid}__${idx}`];
+}
+function pfx(sid, idx, isCustom) {
+  return isCustom ? `c-${sid}-${idx}` : `${sid}-${idx}`;
+}
+
+function setStatus(sid, idx, isCustom, status) {
+  const obj = getObj(sid, idx, isCustom);
+  obj.status = obj.status === status ? null : status;
+  ['green','yellow','red'].forEach(s => {
+    const b = document.getElementById(`btn-${s}-${pfx(sid,idx,isCustom)}`);
+    if (b) b.classList.toggle('active', obj.status === s);
+  });
+  updateSummary();
+  updateBadge(sid);
+}
+
+function setNotes(sid, idx, isCustom, val) {
+  getObj(sid, idx, isCustom).notes = val;
+}
+
+function handlePhoto(sid, idx, isCustom, input) {
+  if (!input.files[0]) return;
+  compress(input.files[0], b64 => {
+    const p = pfx(sid, idx, isCustom);
+    if (isCustom) state.custom[sid][idx].photo = b64;
+    else state.photos[`${sid}__${idx}`] = b64;
+    const t = document.getElementById(`thumb-${p}`);
+    t.src = b64; t.style.display = 'block';
+  });
+}
+
+function removePhoto(sid, idx, isCustom, p) {
+  if (isCustom) state.custom[sid][idx].photo = null;
+  else delete state.photos[`${sid}__${idx}`];
+  const t = document.getElementById(`thumb-${p}`);
+  t.style.display = 'none'; t.src = '';
+}
+
+function addCustom(sid) {
+  const i = state.custom[sid].length;
+  state.custom[sid].push({ label:'', status:null, notes:'', photo:null });
+  const wrap = document.getElementById(`rows-${sid}`);
+  const div = document.createElement('div');
+  div.innerHTML = itemRow(sid, i, '', true);
+  wrap.appendChild(div.firstElementChild);
+  updateBadge(sid);
+}
+
+// ── SUMMARY ──────────────────────────────────────────────────────────────────
+function updateSummary() {
+  let g=0, y=0, r=0, p=0;
+  const count = obj => {
+    if (obj.status==='green') g++;
+    else if (obj.status==='yellow') y++;
+    else if (obj.status==='red') r++;
+    else p++;
+  };
+  Object.values(state.items).forEach(count);
+  SECTIONS.forEach(s => state.custom[s.id].forEach(count));
+  document.getElementById('cnt-green').textContent = g;
+  document.getElementById('cnt-yellow').textContent = y;
+  document.getElementById('cnt-red').textContent = r;
+  document.getElementById('cnt-pending').textContent = p > 0 ? `${p} not reviewed` : '';
+}
+
+function updateBadge(sid) {
+  const sec = SECTIONS.find(s => s.id === sid);
+  if (!sec) return;
+  let done = 0;
+  sec.items.forEach((_, i) => { if (state.items[`${sid}__${i}`].status) done++; });
+  state.custom[sid].forEach(c => { if (c.status) done++; });
+  const total = sec.items.length + state.custom[sid].length;
+  const badge = document.getElementById(`badge-${sid}`);
+  if (badge) badge.textContent = `${done} / ${total}`;
+}
+
+// ── IMAGE COMPRESS ────────────────────────────────────────────────────────────
+function compress(file, cb) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 900;
+      let w = img.width, h = img.height;
+      if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(c.toDataURL('image/jpeg', 0.72));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── PDF GENERATION ────────────────────────────────────────────────────────────
+function generateReport() {
+  const emailEl = document.getElementById('customer-email');
+  const statusEl = document.getElementById('send-status');
+  statusEl.textContent = 'Building report...';
+  statusEl.style.color = '#c9a84c';
+
+  setTimeout(() => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const PW = 210, M = 14, CW = PW - M * 2;
+      let y = 20;
+
+      const GOLD   = [201, 168, 76];
+      const LIGHT  = [210, 210, 210];
+      const MED    = [120, 120, 120];
+      const DIM    = [60,  60,  60];
+      const COL_G  = [82,  183, 136];
+      const COL_Y  = [240, 160, 48];
+      const COL_R  = [230, 57,  70];
+
+      const newPage = () => { pdf.addPage(); y = 20; };
+      const checkY  = (need = 18) => { if (y + need > 276) newPage(); };
+
+      // ── HEADER ──────────────────────────────────────────────────────────
+      pdf.setFillColor(10, 10, 10);
+      pdf.rect(0, 0, PW, 28, 'F');
+      pdf.setFont('times', 'bolditalic');
+      pdf.setFontSize(17);
+      pdf.setTextColor(...GOLD);
+      pdf.text('Stracuzzi Automobili', M, 13);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(...DIM);
+      pdf.text('VEHICLE INSPECTION REPORT', M, 20);
+      const nowStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+      pdf.text(nowStr, PW - M, 13, { align:'right' });
+      y = 36;
+
+      // ── VEHICLE INFO BOX ─────────────────────────────────────────────────
+      const client  = document.getElementById('v-client').value  || '—';
+      const make    = document.getElementById('v-make').value    || '—';
+      const vin     = document.getElementById('v-vin').value     || '—';
+      const mileage = document.getElementById('v-mileage').value || '—';
+      const date    = document.getElementById('v-date').value    || '—';
+      const tech    = document.getElementById('v-tech').value    || '—';
+
+      pdf.setFillColor(18, 18, 18);
+      pdf.roundedRect(M, y, CW, 26, 3, 3, 'F');
+      pdf.setDrawColor(32, 32, 32);
+      pdf.roundedRect(M, y, CW, 26, 3, 3, 'S');
+
+      const C1 = M + 4, C2 = M + CW / 2 + 4;
+      const labels = [['CLIENT', C1, y+7], ['VEHICLE', C2, y+7], ['VIN', C1, y+15], ['MILEAGE', C2, y+15], ['DATE', C1, y+23], ['TECHNICIAN', C2, y+23]];
+      const vals   = [[client, C1+16, y+7], [make, C2+22, y+7], [vin, C1+9, y+15], [mileage, C2+24, y+15], [date, C1+11, y+23], [tech, C2+30, y+23]];
+
+      pdf.setFont('helvetica', 'bold'); pdf.setFontSize(6); pdf.setTextColor(...MED);
+      labels.forEach(([t, x, yy]) => pdf.text(t, x, yy));
+      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5); pdf.setTextColor(...LIGHT);
+      vals.forEach(([t, x, yy]) => pdf.text(String(t).substring(0, 32), x, yy));
+      y += 34;
+
+      // ── SUMMARY ROW ──────────────────────────────────────────────────────
+      let totalG=0, totalY=0, totalR=0;
+      const countObj = o => { if(o.status==='green') totalG++; else if(o.status==='yellow') totalY++; else if(o.status==='red') totalR++; };
+      Object.values(state.items).forEach(countObj);
+      SECTIONS.forEach(s => state.custom[s.id].forEach(countObj));
+
+      pdf.setFillColor(18, 18, 18);
+      pdf.roundedRect(M, y, CW, 14, 2, 2, 'F');
+      const colW = CW / 3;
+      [[totalG,'GOOD',COL_G],[totalY,'MONITOR',COL_Y],[totalR,'FIX ASAP',COL_R]].forEach(([n,lbl,col], i) => {
+        const cx = M + colW * i + colW / 2;
+        pdf.setFont('helvetica','bold'); pdf.setFontSize(14); pdf.setTextColor(...col);
+        pdf.text(String(n), cx, y+9, { align:'center' });
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(6); pdf.setTextColor(...MED);
+        pdf.text(lbl, cx, y+13, { align:'center' });
+      });
+      y += 22;
+
+      // ── SECTIONS ─────────────────────────────────────────────────────────
+      SECTIONS.forEach(sec => {
+        checkY(22);
+
+        // Section bar
+        pdf.setFillColor(...GOLD);
+        pdf.rect(M, y, CW, 6.5, 'F');
+        pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(10,10,10);
+        pdf.text(sec.title.toUpperCase(), M + 3, y + 4.5);
+        y += 9;
+
+        // Column labels
+        pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5); pdf.setTextColor(...MED);
+        pdf.text('ITEM', M+3, y); pdf.text('STATUS', M+102, y); pdf.text('NOTES', M+130, y);
+        y += 2.5;
+        pdf.setDrawColor(28,28,28); pdf.line(M, y, M+CW, y);
+        y += 4;
+
+        // Collect items + custom
+        const allItems = [
+          ...sec.items.map((lbl, i) => ({ lbl, ...state.items[`${sec.id}__${i}`], photo: state.photos[`${sec.id}__${i}`] || null })),
+          ...state.custom[sec.id].map(c => ({ lbl: c.label || '(unnamed)', status: c.status, notes: c.notes, photo: c.photo || null }))
+        ];
+
+        const sectionPhotos = [];
+
+        allItems.forEach(item => {
+          const rowH = 9;
+          checkY(rowH + 3);
+
+          const statusText  = item.status === 'green' ? 'GOOD' : item.status === 'yellow' ? 'MONITOR' : item.status === 'red' ? 'FIX ASAP' : '—';
+          const statusColor = item.status === 'green' ? COL_G : item.status === 'yellow' ? COL_Y : item.status === 'red' ? COL_R : DIM;
+
+          pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(...LIGHT);
+          const nameLines = pdf.splitTextToSize(item.lbl, 94);
+          const actualH = Math.max(rowH, nameLines.length * 3.8 + 2);
+          pdf.text(nameLines, M+3, y+4);
+
+          pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(...statusColor);
+          pdf.text(statusText, M+102, y+4);
+
+          if (item.notes) {
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(...MED);
+            const noteLines = pdf.splitTextToSize(item.notes, 56);
+            pdf.text(noteLines, M+130, y+4);
+          }
+
+          if (item.photo) {
+            pdf.setFont('helvetica','italic'); pdf.setFontSize(6.5); pdf.setTextColor(...GOLD);
+            pdf.text('[photo]', M+188, y+4);
+            sectionPhotos.push({ label: item.lbl, photo: item.photo });
+          }
+
+          y += actualH;
+          pdf.setDrawColor(20,20,20); pdf.line(M, y, M+CW, y);
+          y += 3;
+        });
+
+        // Section photo grid
+        if (sectionPhotos.length > 0) {
+          checkY(14);
+          pdf.setFont('helvetica','italic'); pdf.setFontSize(7); pdf.setTextColor(...DIM);
+          pdf.text('Section Photos:', M+3, y+4);
+          y += 8;
+
+          const PW2 = 54, PH2 = 40, GAP = 5;
+          let px = M;
+
+          sectionPhotos.forEach(({ label, photo }) => {
+            if (px + PW2 > M + CW) { px = M; y += PH2 + 12; }
+            checkY(PH2 + 14);
+            try {
+              pdf.addImage(photo, 'JPEG', px, y, PW2, PH2);
+              pdf.setFontSize(6); pdf.setTextColor(...DIM);
+              const ll = pdf.splitTextToSize(label, PW2);
+              pdf.text(ll, px, y + PH2 + 3);
+            } catch(_) {}
+            px += PW2 + GAP;
+          });
+          y += PH2 + 14;
+        }
+
+        y += 5;
+      });
+
+      // ── FINAL APPROVAL ───────────────────────────────────────────────────
+      checkY(35);
+      pdf.setFillColor(...GOLD);
+      pdf.rect(M, y, CW, 6.5, 'F');
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(7.5); pdf.setTextColor(10,10,10);
+      pdf.text('FINAL APPROVAL', M+3, y+4.5);
+      y += 12;
+
+      const faTech  = document.getElementById('fa-tech').value  || '—';
+      const faDate  = document.getElementById('fa-date').value  || '—';
+      const faNotes = document.getElementById('fa-notes').value;
+
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(8.5); pdf.setTextColor(...LIGHT);
+      pdf.text(`Technician: ${faTech}`, M+3, y);
+      pdf.text(`Date: ${faDate}`, M+110, y);
+      y += 6;
+
+      if (faNotes) {
+        pdf.setTextColor(...MED); pdf.setFontSize(8);
+        const nl = pdf.splitTextToSize(faNotes, CW-6);
+        checkY(nl.length * 4 + 8);
+        pdf.text(nl, M+3, y);
+        y += nl.length * 4 + 4;
+      }
+
+      y += 6;
+      pdf.setDrawColor(...MED);
+      pdf.line(M+3, y+10, M+82, y+10);
+      pdf.line(M+100, y+10, M+178, y+10);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(6.5); pdf.setTextColor(...DIM);
+      pdf.text('Technician Signature', M+3, y+14);
+      pdf.text('Client Signature', M+100, y+14);
+
+      // ── PAGE FOOTERS ─────────────────────────────────────────────────────
+      const total = pdf.internal.getNumberOfPages();
+      for (let p = 1; p <= total; p++) {
+        pdf.setPage(p);
+        pdf.setDrawColor(25,25,25); pdf.line(M, 289, PW-M, 289);
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(6); pdf.setTextColor(...DIM);
+        pdf.text('Stracuzzi Automobili · Vehicle Inspection Report', M, 293);
+        pdf.text(`Page ${p} of ${total}`, PW-M, 293, { align:'right' });
+      }
+
+      // ── SAVE ─────────────────────────────────────────────────────────────
+      const safeName = client.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+      const filename = `Inspection_${safeName}_${date}.pdf`;
+      pdf.save(filename);
+
+      // ── EMAIL ────────────────────────────────────────────────────────────
+      const email = emailEl.value.trim();
+      if (email) {
+        const subj = encodeURIComponent(`Vehicle Inspection Report — ${make}`);
+        const body = encodeURIComponent(
+          `Dear ${client},\n\n` +
+          `Please find attached your vehicle inspection report from Stracuzzi Automobili.\n\n` +
+          `Inspection Summary:\n` +
+          `  • ${totalG} items in good condition\n` +
+          `  • ${totalY} items to monitor\n` +
+          `  • ${totalR} items require immediate attention\n\n` +
+          `Please review and contact us with any questions.\n\n` +
+          `Stracuzzi Automobili`
+        );
+        window.open(`mailto:${email}?subject=${subj}&body=${body}`);
+        statusEl.textContent = '✓ PDF downloaded. Email draft opened — attach the PDF and send.';
+        statusEl.style.color = '#52b788';
+      } else {
+        statusEl.textContent = '✓ Report downloaded as ' + filename;
+        statusEl.style.color = '#52b788';
+      }
+
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Error: ' + err.message;
+      statusEl.style.color = '#e63946';
+    }
+  }, 60);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildSections();
+  updateSummary();
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('v-date').value = today;
+  document.getElementById('fa-date').value = today;
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+});
+</script>
+</body>
+</html>
