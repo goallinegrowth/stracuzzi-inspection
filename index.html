@@ -156,7 +156,7 @@ const SECTIONS = [
   { id:'body',         title:'Body & Structure',            items:['No structural rust','Windshield condition','Mirrors secure','No loose trim','No sharp edges'] },
   { id:'operational',  title:'Operational Check',           items:['Engine starts properly','Idle stability','No abnormal vibrations','No excessive smoke','Throttle response'] },
   { id:'leaks',        title:'Leak Classification',         items:['Dry','Slightly wet','Weeping','Active leak','Severe leak'] },
-  { id:'docs',         title:'Final Documentation',         items:['Photos taken','Damage recorded','Fuel level noted','Technician notes completed'] }
+  { id:'docs',         title:'Final Documentation',         items:['Photos taken','Damage recorded','Fuel level noted','Technician notes completed'], binary:true }
 ];
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ function buildSections() {
         <span class="section-badge" id="badge-${sec.id}">0 / ${sec.items.length}</span>
       </div>
       <div class="section-body" id="rows-${sec.id}">
-        ${sec.items.map((item, i) => itemRow(sec.id, i, item, false)).join('')}
+        ${sec.items.map((item, i) => itemRow(sec.id, i, item, false, sec.binary)).join('')}
         <button class="add-item-btn" onclick="addCustom('${sec.id}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add item
@@ -192,19 +192,23 @@ function buildSections() {
   });
 }
 
-function itemRow(sid, idx, label, isCustom) {
+function itemRow(sid, idx, label, isCustom, binary) {
   const pfx = isCustom ? `c-${sid}-${idx}` : `${sid}-${idx}`;
   const labelHtml = isCustom
     ? `<input class="item-name-input" type="text" placeholder="Item description..." value="${label || ''}" oninput="state.custom['${sid}'][${idx}].label=this.value">`
     : `<div class="item-name">${label}</div>`;
+  const statusButtons = binary
+    ? `<button class="status-btn green"  id="btn-green-${pfx}"  onclick="setStatus('${sid}',${idx},${isCustom},'green')">&#10003; Yes</button>
+          <button class="status-btn red"    id="btn-red-${pfx}"    onclick="setStatus('${sid}',${idx},${isCustom},'red')">&#10005; No</button>`
+    : `<button class="status-btn green"  id="btn-green-${pfx}"  onclick="setStatus('${sid}',${idx},${isCustom},'green')">&#10003; Good</button>
+          <button class="status-btn yellow" id="btn-yellow-${pfx}" onclick="setStatus('${sid}',${idx},${isCustom},'yellow')">&#9888; Monitor</button>
+          <button class="status-btn red"    id="btn-red-${pfx}"    onclick="setStatus('${sid}',${idx},${isCustom},'red')">&#10005; Fix ASAP</button>`;
   return `
     <div class="item-row" id="row-${pfx}">
       <div style="flex:1;">
         ${labelHtml}
         <div class="status-row">
-          <button class="status-btn green"  id="btn-green-${pfx}"  onclick="setStatus('${sid}',${idx},${isCustom},'green')">&#10003; Good</button>
-          <button class="status-btn yellow" id="btn-yellow-${pfx}" onclick="setStatus('${sid}',${idx},${isCustom},'yellow')">&#9888; Monitor</button>
-          <button class="status-btn red"    id="btn-red-${pfx}"    onclick="setStatus('${sid}',${idx},${isCustom},'red')">&#10005; Fix ASAP</button>
+          ${statusButtons}
         </div>
         <textarea class="notes-input" id="notes-${pfx}" rows="1" placeholder="Notes..."
           oninput="setNotes('${sid}',${idx},${isCustom},this.value);this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
