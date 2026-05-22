@@ -140,13 +140,10 @@
     </div>
   </div>
 
-  <!-- Send Section -->
+  <!-- Generate Section -->
   <div class="section-card" style="padding:20px;">
-    <div class="vehicle-label" style="margin-bottom:10px;">Send Report to Customer</div>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <input type="email" id="customer-email" placeholder="customer@email.com"
-        style="flex:1; min-width:200px; background:#0c0c0c; border:1px solid #1e1e1e; border-radius:8px; padding:10px 14px; font-size:0.85rem; color:#d4d4d4; font-family:'Inter',sans-serif;">
-      <button class="generate-btn" onclick="generateReport()">Generate &amp; Send Report &rarr;</button>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="generate-btn" onclick="generateReport()">Generate PDF Report &rarr;</button>
     </div>
     <div id="send-status" style="margin-top:10px; font-size:0.8rem; color:#555; min-height:18px;"></div>
   </div>
@@ -337,7 +334,6 @@ function compress(file, cb) {
 
 // ── PDF GENERATION ────────────────────────────────────────────────────────────
 function generateReport() {
-  const emailEl = document.getElementById('customer-email');
   const statusEl = document.getElementById('send-status');
   statusEl.textContent = 'Building report...';
   statusEl.style.color = '#c9a84c';
@@ -549,26 +545,9 @@ function generateReport() {
       const filename = `Inspection_${safeName}_${date}.pdf`;
       pdf.save(filename);
 
-      // ── EMAIL ────────────────────────────────────────────────────────────
-      const email = emailEl.value.trim();
-      if (email) {
-        statusEl.textContent = 'Sending email...';
-        statusEl.style.color = '#c9a84c';
-        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-        try {
-          const resp = await fetch('/api/send-report', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: email, clientName: client, make, pdfBase64, filename, totalG, totalY, totalR })
-          });
-          const data = await resp.json();
-          if (!resp.ok) throw new Error(data.error || 'Send failed');
-          statusEl.textContent = `✓ Report downloaded & email sent to ${email}`;
-          statusEl.style.color = '#52b788';
-        } catch (emailErr) {
-          statusEl.textContent = `✓ PDF downloaded. Email failed: ${emailErr.message}`;
-          statusEl.style.color = '#f0a030';
-        }
+      {
+        statusEl.textContent = '✓ PDF downloaded';
+        statusEl.style.color = '#52b788';
       } else {
         statusEl.textContent = '✓ Report downloaded as ' + filename;
         statusEl.style.color = '#52b788';
@@ -594,7 +573,7 @@ function newInspection() {
   Object.keys(state.photos).forEach(k => delete state.photos[k]);
 
   // Clear vehicle info inputs
-  ['v-client','v-make','v-vin','v-mileage','v-tech','fa-tech','fa-notes','customer-email'].forEach(id => {
+  ['v-client','v-make','v-vin','v-mileage','v-tech','fa-tech','fa-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
