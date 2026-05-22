@@ -440,7 +440,7 @@ function generateReport() {
           const statusText  = item.status === 'green' ? 'GOOD' : item.status === 'yellow' ? 'MONITOR' : item.status === 'red' ? 'FIX ASAP' : '—';
           const statusColor = item.status === 'green' ? COL_G : item.status === 'yellow' ? COL_Y : item.status === 'red' ? COL_R : DIM;
 
-          pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(...LIGHT);
+          pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(30, 30, 30);
           const nameLines = pdf.splitTextToSize(item.lbl, 94);
           const actualH = Math.max(rowH, nameLines.length * 3.8 + 2);
           pdf.text(nameLines, M+3, y+4);
@@ -449,7 +449,7 @@ function generateReport() {
           pdf.text(statusText, M+102, y+4);
 
           if (item.notes) {
-            pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(...MED);
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(80, 80, 80);
             const noteLines = pdf.splitTextToSize(item.notes, 56);
             pdf.text(noteLines, M+130, y+4);
           }
