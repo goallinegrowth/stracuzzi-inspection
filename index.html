@@ -536,13 +536,8 @@ function generateReport() {
       const filename = `Inspection_${safeName}_${date}.pdf`;
       pdf.save(filename);
 
-      {
-        statusEl.textContent = '✓ PDF downloaded';
-        statusEl.style.color = '#52b788';
-      } else {
-        statusEl.textContent = '✓ Report downloaded as ' + filename;
-        statusEl.style.color = '#52b788';
-      }
+      statusEl.textContent = '✓ PDF downloaded';
+      statusEl.style.color = '#52b788';
 
     } catch (err) {
       console.error(err);
