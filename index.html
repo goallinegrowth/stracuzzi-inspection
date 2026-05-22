@@ -63,11 +63,6 @@
     .generate-btn:hover { opacity: 0.88; }
     .generate-btn:active { opacity: 0.75; }
 
-    .section-header { cursor: pointer; user-select: none; }
-    .section-header:hover { background: #181818; }
-    .chevron { transition: transform 0.2s; color: #444; flex-shrink: 0; }
-    .section-card.collapsed .chevron { transform: rotate(-90deg); }
-    .section-card.collapsed .section-body { display: none; }
 
     .new-insp-btn { background: transparent; border: 1px solid #2a2a2a; border-radius: 7px; padding: 7px 14px; color: #666; font-size: 0.75rem; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.12s; }
     .new-insp-btn:hover { border-color: #e63946; color: #e63946; }
@@ -180,11 +175,10 @@ function buildSections() {
     card.className = 'section-card';
     card.id = `sec-${sec.id}`;
     card.innerHTML = `
-      <div class="section-header" onclick="toggleSection('${sec.id}')">
+      <div class="section-header">
         <span class="section-num">${si + 1}</span>
         <span class="section-title">${sec.title}</span>
         <span class="section-badge" id="badge-${sec.id}">0 / ${sec.items.length}</span>
-        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
       <div class="section-body" id="rows-${sec.id}">
         ${sec.items.map((item, i) => itemRow(sec.id, i, item, false)).join('')}
@@ -280,9 +274,6 @@ function addCustom(sid) {
   updateBadge(sid);
 }
 
-function toggleSection(sid) {
-  document.getElementById(`sec-${sid}`).classList.toggle('collapsed');
-}
 
 // ── SUMMARY ──────────────────────────────────────────────────────────────────
 function updateSummary() {
